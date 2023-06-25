@@ -1,6 +1,6 @@
 ## Cхема Базы Данных filmorate.
 
-![Схема БД](filmorate db schema.png)
+![Схема БД](filmorate-group-db-schema.png)
 
 ### Таблицы.
 - **films** - содержит информацию о фильмах.
@@ -13,6 +13,8 @@
     * id_user + id_friend - уникальная пара.
     * если is_accepted = TRUE, то это значит, что пользователь id_user добавил в друзья id_friend.
     * таблица дважды ссылается на одно поле (id) в таблице users.
+- **reviews** - отзывы пользователей о фильмах.
+- **reviews_likes** - лайки/дизлайки к отзывам.
 
 ### Примеры запросов.
 - **films**\
@@ -49,3 +51,19 @@
     FROM friendship 
     WHERE id_user = ? AND is_accepted = TRUE;
     ```
+- **reviews**\
+  Получение отзывов (вместе с рейтингом отзыва).
+  ```sql
+  SELECT r.id, r.id_user, r.id_film, r.content, r.isPositive,
+  (COALESCE(rl1.likes_count, 0) - COALESCE(rl2.dislikes_count, 0)) AS rating
+  FROM "reviews" r
+  LEFT JOIN (SELECT id_review, COUNT(id) as likes_count 
+             FROM "reviews_likes" 
+             WHERE isUseful = TRUE 
+             GROUP BY id_review) rl1 ON rl1.id_review = r.id
+  LEFT JOIN (SELECT id_review, COUNT(id) as dislikes_count
+             FROM \"reviews_likes\"
+             WHERE isUseful = FALSE 
+             GROUP BY id_review) rl2 ON rl2.id_review = r.id
+  ORDER BY rating DESC;
+  ```
